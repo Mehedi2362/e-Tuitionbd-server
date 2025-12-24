@@ -5,6 +5,8 @@
 # ==================== Local Environment Files ====================
 # Local environment variable overrides
 *.local
+.env
+.env.local
 .env.prod
 # ==================== Dependencies ====================
 # Node package manager directories
