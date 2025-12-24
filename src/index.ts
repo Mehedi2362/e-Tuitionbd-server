@@ -23,9 +23,40 @@ const app: Express = express()
 app.use(helmet())
 app.use(compression())
 
+// Database connection middleware for serverless (Vercel)
+import { db } from './config/db.js';
+app.use(async (req, res, next) => {
+    try {
+        await db.connect();
+        next();
+    } catch (error) {
+        console.error('Database connection error:', error);
+        res.status(500).json({ success: false, message: 'Database connection failed' });
+    }
+});
+
 //CORS Configuration
+const allowedOrigins = [
+    getEnv.string('CLIENT_URL', 'http://localhost:3000'),
+    'https://e-tuitionbd.netlify.app',
+    'http://localhost:3000',
+    'http://localhost:5173'
+].map(url => url.replace(/\/$/, '')); // Remove trailing slashes
+
 app.use(cors({
-    origin: getEnv.string('CLIENT_URL', 'http://localhost:3000'),
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps, Postman, curl)
+        if (!origin) return callback(null, true);
+
+        // Normalize origin by removing trailing slash
+        const normalizedOrigin = origin.replace(/\/$/, '');
+
+        if (allowedOrigins.some(allowed => normalizedOrigin === allowed)) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true,
 }))
 

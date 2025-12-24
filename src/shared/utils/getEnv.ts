@@ -1,8 +1,12 @@
 export const getEnv = {
-	string: (key: string, fallback?: string): string =>
-		process.env[key] ?? fallback ?? (() => {
+	string: (key: string, fallback?: string): string => {
+		const value = process.env[key] ?? fallback;
+		if (value === undefined) {
 			throw new Error(`Environment variable ${key} is not defined`);
-		})(),
+		}
+		// Trim whitespace and control characters
+		return value.trim();
+	},
 
 	number: (key: string, fallback?: number): number =>
 		(process.env[key] !== undefined ? Number(process.env[key]) : fallback) ?? (() => {
