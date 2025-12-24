@@ -1,3 +1,11 @@
+# ==================== Deployment Directories ====================
+# Vercel deployment directory
 .vercel
+
+# ==================== Local Environment Files ====================
+# Local environment variable overrides
 *.local
+
+# ==================== Dependencies ====================
+# Node package manager directories
 node_modules
