@@ -138,4 +138,21 @@ export class UserModel {
             ])
             .toArray();
     }
+
+    // Get distinct values for tutor fields (API v1 compatible)
+    static async getDistinctValues(field: keyof IUser, filter: Filter<IUser> = {}): Promise<string[]> {
+        const results = await this.collection
+            .aggregate([
+                { $match: filter },
+                { $unwind: `$${String(field)}` },
+                { $group: { _id: `$${String(field)}` } },
+                { $sort: { _id: 1 } }
+            ])
+            .toArray();
+
+        return results
+            .map(doc => doc._id)
+            .filter(value => value != null && value !== '')
+            .map(v => String(v));
+    }
 }

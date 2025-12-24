@@ -166,4 +166,20 @@ export class TuitionModel {
             ])
             .toArray() as Promise<{ status: TuitionStatus; count: number }[]>;
     }
+
+    // Get distinct values for a field with filters using aggregation (API v1 compatible)
+    static async getDistinctValues(field: keyof ITuition, filter: Filter<ITuition> = {}): Promise<string[]> {
+        const results = await this.collection
+            .aggregate([
+                { $match: filter },
+                { $group: { _id: `$${String(field)}` } },
+                { $sort: { _id: 1 } }
+            ])
+            .toArray();
+
+        return results
+            .map(doc => doc._id)
+            .filter(value => value != null && value !== '')
+            .map(v => String(v));
+    }
 }

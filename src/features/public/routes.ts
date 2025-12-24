@@ -19,6 +19,11 @@ router.get(
 );
 
 router.get(
+    PUBLIC_TUITION_ROUTES.FILTER_OPTIONS,
+    asyncHandler(PublicController.getFilterOptions)
+);
+
+router.get(
     PUBLIC_TUITION_ROUTES.BY_ID(":id"),
     optionalAuth,
     asyncHandler(PublicController.getTuitionById)
@@ -34,6 +39,11 @@ router.get(
 router.get(
     PUBLIC_TUTOR_ROUTES.FEATURED,
     asyncHandler(PublicController.getFeaturedTutors)
+);
+
+router.get(
+    PUBLIC_TUTOR_ROUTES.FILTER_OPTIONS,
+    asyncHandler(PublicController.getTutorFilterOptions)
 );
 
 router.get(

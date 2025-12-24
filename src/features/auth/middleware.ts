@@ -107,8 +107,20 @@ export const anyRoleMiddleware = requireRole(ROLES.STUDENT, ROLES.TUTOR, ROLES.A
 export const guestMiddleware = (req: AuthRequest, res: Response, next: NextFunction): void => {
 	const cookieToken = req.cookies?.['auth_token'];
 	if (cookieToken) {
-		res.status(403).json({ message: `Already authenticated users cannot access this route` });
-		return;
+		// Verify if token is valid
+		try {
+			jwt.verify(cookieToken, getEnv.string('JWT_SECRET'));
+			// Token is valid, user is authenticated
+			res.status(403).json({ message: `Already authenticated users cannot access this route` });
+			return;
+		} catch {
+			// Token is invalid/expired, clear it and allow access
+			res.clearCookie("auth_token", {
+				httpOnly: true,
+				secure: process.env.NODE_ENV === 'production',
+				sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax"
+			});
+		}
 	}
 	next();
 }

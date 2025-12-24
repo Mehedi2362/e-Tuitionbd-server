@@ -60,6 +60,8 @@ export class AuthController {
 
         // Find user
         const user: IUser | null = await UserModel.findByEmail(email);
+        console.log(user);
+        
         if (!user) {
             sendError(res, "Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
             return;
