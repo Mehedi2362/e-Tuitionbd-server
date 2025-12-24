@@ -10,6 +10,7 @@ import { Router, type IRouter } from "express";
 import {
     STUDENT_TUITION_ROUTES,
     STUDENT_APPLICATION_ROUTES,
+    STUDENT_PAYMENT_ROUTES,
 } from "@/shared-types/dashboard/student.js";
 import { authMiddleware, studentMiddleware } from "../../auth/middleware.js";
 import { StudentDashboardController } from "./controller.js";
@@ -22,22 +23,27 @@ router.use(authMiddleware, studentMiddleware);
 
 
 // ==================== Tuition Management ====================
-// POST /dashboard/student/tuitions - Create a new tuition posting
+// POST /tuitions - Create a new tuition posting
 router.post(
     STUDENT_TUITION_ROUTES.CREATE,
     StudentDashboardController.createTuition
 );
-// GET /dashboard/student/tuitions - Get all student's tuitions
+// GET /tuitions - Get all student's tuitions
+router.get(
+    STUDENT_TUITION_ROUTES.ALL,
+    StudentDashboardController.getMyTuitions
+);
+// GET /tuitions/my - Get all student's tuitions (alias)
 router.get(
     STUDENT_TUITION_ROUTES.MY,
     StudentDashboardController.getMyTuitions
 );
-// PATCH /dashboard/student/tuitions/:id - Update tuition details
+// PATCH /tuitions/:id - Update tuition details
 router.patch(
     STUDENT_TUITION_ROUTES.UPDATE(":id"),
     StudentDashboardController.updateTuition
 );
-// DELETE /dashboard/student/tuitions/:id - Delete tuition posting
+// DELETE /tuitions/:id - Delete tuition posting
 router.delete(
     STUDENT_TUITION_ROUTES.DELETE(":id"),
     StudentDashboardController.deleteTuition
@@ -56,6 +62,12 @@ router.patch(
 router.patch(
     STUDENT_APPLICATION_ROUTES.REJECT(":id"),
     StudentDashboardController.rejectApplication
+);
+
+// ==================== Payment Management ====================
+router.get(
+    STUDENT_PAYMENT_ROUTES.ALL,
+    StudentDashboardController.getPayments
 );
 
 export const studentDashboardRouter: IRouter = router;

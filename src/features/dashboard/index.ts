@@ -25,9 +25,10 @@ router.patch(
 );
 
 // ==================== Mount Role-Specific Routers ====================
-router.use(adminDashboardRouter);
-router.use(studentDashboardRouter);
-router.use(tutorDashboardRouter);
+// Mount under root - each router has its own path prefix in its routes
+router.use("/admin", adminDashboardRouter);
+router.use("/student", studentDashboardRouter);
+router.use("/tutor", tutorDashboardRouter);
 
 export const dashboardRouter: IRouter = router;
 

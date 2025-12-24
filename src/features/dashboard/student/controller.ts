@@ -14,6 +14,7 @@ import {
 import {
     TuitionModel,
     ApplicationModel,
+    PaymentModel,
     type ITuition,
     type ApplicationStatus,
 } from "../../../shared/models/index.js";
@@ -259,5 +260,25 @@ export class StudentDashboardController {
         const updated = await ApplicationModel.updateStatus(objectId, "rejected" as ApplicationStatus);
 
         sendSuccess(res, updated, "Application rejected successfully");
+    }
+
+    // ==================== Get Payments ====================
+    static async getPayments(
+        req: AuthRequest,
+        res: Response
+    ): Promise<void> {
+        const { skip, limit, page } = parsePagination(req.query);
+        const { email } = req.user!;
+
+        const { data: payments, total } = await PaymentModel.findByStudentId(email, { skip, limit });
+
+        sendPaginated(
+            res,
+            payments,
+            page,
+            limit,
+            total,
+            "Payments fetched successfully"
+        );
     }
 }

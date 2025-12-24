@@ -1,18 +1,18 @@
 // ==================== Tutor Dashboard Routes ====================
 export const TUTOR_APPLICATION_ROUTES = {
-    ALL: "/tutor/applications",
-    MY: "/tutor/applications/my",
-    BY_ID: (id: string) => `/tutor/applications/${id}`,
-    CREATE: "/tutor/applications/create",
-    UPDATE: (id: string) => `/tutor/applications/${id}/update`,
-    DELETE: (id: string) => `/tutor/applications/${id}/delete`,
+    ALL: "/applications",
+    MY: "/applications/my",
+    BY_ID: (id: string) => `/applications/${id}`,
+    CREATE: "/applications/create",
+    UPDATE: (id: string) => `/applications/${id}/update`,
+    DELETE: (id: string) => `/applications/${id}/delete`,
 } as const;
 
 export const TUTOR_TUITION_ROUTES = {
-    ONGOING: "/tutor/tuitions/ongoing",
+    ONGOING: "/tuitions/ongoing",
 } as const;
 
 export const TUTOR_PAYMENT_ROUTES = {
-    EARNINGS: "/tutor/earnings",
-    HISTORY: "/tutor/payments",
+    EARNINGS: "/earnings",
+    HISTORY: "/payments",
 } as const;

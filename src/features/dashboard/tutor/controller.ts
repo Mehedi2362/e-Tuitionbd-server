@@ -13,6 +13,7 @@ import {
 import {
     TuitionModel,
     ApplicationModel,
+    PaymentModel,
     type IApplication,
 } from "../../../shared/models/index.js";
 import type { AuthRequest } from "../../auth/types.js";
@@ -210,5 +211,89 @@ export class TutorDashboardController {
         await TuitionModel.decrementApplicationsCount(application.tuitionId);
 
         sendSuccess(res, null, "Application deleted successfully");
+    }
+
+    // ==================== Get Ongoing Tuitions ====================
+    static async getOngoingTuitions(
+        req: AuthRequest,
+        res: Response
+    ): Promise<void> {
+        const { skip, limit, page } = parsePagination(req.query);
+        const { email } = req.user!;
+
+        // Get approved applications for this tutor
+        const { data: applications, total } = await ApplicationModel.findByTutorId(
+            email,
+            { skip, limit }
+        );
+
+        // Filter only approved applications and get tuition details
+        const approvedApplications = applications.filter(app => app.status === 'approved');
+
+        // Get tuition details for each approved application
+        const tuitionsWithDetails = await Promise.all(
+            approvedApplications.map(async (app) => {
+                const tuition = await TuitionModel.findById(app.tuitionId);
+                return tuition;
+            })
+        );
+
+        // Filter out null tuitions
+        const tuitions = tuitionsWithDetails.filter(t => t !== null);
+
+        sendPaginated(
+            res,
+            tuitions,
+            page,
+            limit,
+            tuitions.length,
+            "Ongoing tuitions fetched successfully"
+        );
+    }
+
+    // ==================== Get Earnings ====================
+    static async getEarnings(
+        req: AuthRequest,
+        res: Response
+    ): Promise<void> {
+        const { email } = req.user!;
+
+        // Get all payments for this tutor
+        const { data: payments } = await PaymentModel.findByTutorId(email);
+
+        // Calculate earnings
+        const completedPayments = payments.filter(p => p.status === 'completed');
+        const pendingPayments = payments.filter(p => p.status === 'pending');
+
+        const totalEarnings = completedPayments.reduce((sum, p) => sum + (p.tutorEarnings || p.amount), 0);
+        const pendingEarnings = pendingPayments.reduce((sum, p) => sum + (p.tutorEarnings || p.amount), 0);
+        const paidEarnings = totalEarnings;
+
+        sendSuccess(res, {
+            totalEarnings,
+            pendingEarnings,
+            paidEarnings,
+            transactions: payments,
+        }, "Earnings fetched successfully");
+    }
+
+    // ==================== Get Payments ====================
+    static async getPayments(
+        req: AuthRequest,
+        res: Response
+    ): Promise<void> {
+        const { skip, limit, page } = parsePagination(req.query);
+        const { email } = req.user!;
+
+        const { data: payments, total } = await PaymentModel.findByTutorId(email, { skip, limit });
+
+        sendPaginated(
+            res,
+            payments,
+            page,
+            limit,
+            total,
+            "Payments fetched successfully"
+        );
     }
 }

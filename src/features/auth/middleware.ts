@@ -76,7 +76,9 @@ export const requireRole = (...roles: UserRole[]) => {
 				return;
 			}
 
-			if (!roles.includes(user.role)) {
+			const userRole = user.role.trim() as UserRole;
+
+			if (!roles.includes(userRole)) {
 				res.status(HTTP_STATUS.FORBIDDEN).json({
 					success: false,
 					message: ERROR_MESSAGES.FORBIDDEN,
