@@ -39,11 +39,12 @@ export class AuthController {
             { expiresIn: "7d" }
         );
 
-        // Set HttpOnly cookie
+        // Set HttpOnly cookie with proper cross-domain settings
         res.cookie("auth_token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+            secure: true, // Required for SameSite=None (production has HTTPS)
+            sameSite: "none", // Allow cross-domain cookies
+            path: "/",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -86,11 +87,12 @@ export class AuthController {
             { expiresIn: "7d" }
         );
 
-        // Set HttpOnly cookie
+        // Set HttpOnly cookie with proper cross-domain settings
         res.cookie("auth_token", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+            secure: true, // Required for SameSite=None (production has HTTPS)
+            sameSite: "none", // Allow cross-domain cookies
+            path: "/",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
@@ -151,11 +153,12 @@ export class AuthController {
             );
             console.log('✅ JWT generated');
 
-            // Set HttpOnly cookie
+            // Set HttpOnly cookie with proper cross-domain settings
             res.cookie("auth_token", jwtToken, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === 'production',
-                sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
+                secure: true, // Required for SameSite=None (production has HTTPS)
+                sameSite: "none", // Allow cross-domain cookies
+                path: "/",
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
 
@@ -181,8 +184,9 @@ export class AuthController {
     static async signOut(_req: AuthRequest, res: Response): Promise<void> {
         res.clearCookie("auth_token", {
             httpOnly: true,
-            secure: process.env.NODE_ENV === 'production',
-            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax"
+            secure: true, // Required for SameSite=None
+            sameSite: "none", // Must match cookie creation
+            path: "/"
         });
 
         sendSuccess(res, null, "Logout successful");
