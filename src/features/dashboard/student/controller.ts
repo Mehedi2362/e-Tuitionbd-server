@@ -36,7 +36,7 @@ export class StudentDashboardController {
         const { email, name } = req.user!;
 
         const tuition = await TuitionModel.create({
-            student: { email },
+            student: { email, name: name || "Unknown" },
             subject,
             class: className,
             location,
@@ -62,12 +62,13 @@ export class StudentDashboardController {
         } = req.query;
 
         // Build filter
-        const filter: Filter<ITuition> = { studentId: email };
+        const filter: Filter<ITuition> = {
+            "student.email": email,
+        };
 
         if (subject) filter.subject = { $regex: subject as string, $options: "i" };
         if (className) filter.class = className as string;
-        if (location)
-            filter.location = { $regex: location as string, $options: "i" };
+        if (location) filter.location = { $regex: location as string, $options: "i" };
         if (status) filter.status = status as ITuition["status"];
         if (search) {
             filter.$or = [
@@ -77,7 +78,7 @@ export class StudentDashboardController {
             ];
         }
 
-        const { data: tuitions, total } = await TuitionModel.findByStudentId(email, {
+        const { data: tuitions, total } = await TuitionModel.findAll(filter, {
             skip,
             limit,
         });

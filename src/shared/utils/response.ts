@@ -41,7 +41,7 @@ export const sendPaginated = <T>(
         success: true,
         message,
         data,
-        meta: {
+        pagination: {
             page,
             limit,
             total,

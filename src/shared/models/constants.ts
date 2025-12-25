@@ -41,6 +41,7 @@ export const TUTOR_DETAIL_PROJECTION = {
 export const TUITION_LIST_PROJECTION = {
     _id: 1,
     studentName: 1,
+    student:1,
     subject: 1,
     class: 1,
     location: 1,

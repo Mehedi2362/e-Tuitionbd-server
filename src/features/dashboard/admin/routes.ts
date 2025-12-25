@@ -40,7 +40,7 @@ router.patch(
     AdminDashboardController.updateUserRole
 );
 router.patch(
-    `${ADMIN_USER_ROUTES.ALL}/:email/status`,
+    ADMIN_USER_ROUTES.UPDATE_STATUS(":email"),
     AdminDashboardController.updateUserStatus
 );
 router.delete(
@@ -50,11 +50,15 @@ router.delete(
 
 // ==================== Tuition Management ====================
 router.get(
+    ADMIN_TUITION_ROUTES.STATS,
+    AdminDashboardController.getTuitionStats
+);
+router.get(
     ADMIN_TUITION_ROUTES.ALL,
     AdminDashboardController.getTuitions
 );
 router.patch(
-    `${ADMIN_TUITION_ROUTES.ALL}/:id/status`,
+    ADMIN_TUITION_ROUTES.UPDATE_STATUS(":id"),
     AdminDashboardController.updateTuitionStatus
 );
 

@@ -8,6 +8,7 @@ export const ADMIN_USER_ROUTES = {
     ALL: "/users",
     BY_ID: (uid: string) => `/users/${uid}`,
     UPDATE_ROLE: (uid: string) => `/users/${uid}/role`,
+    UPDATE_STATUS: (uid: string) => `/users/${uid}/status`,
     DELETE: (uid: string) => `/users/${uid}`,
 } as const;
 
@@ -15,6 +16,7 @@ export const ADMIN_TUITION_ROUTES = {
     ALL: "/tuitions",
     BY_ID: (id: string) => `/tuitions/${id}`,
     UPDATE_STATUS: (id: string) => `/tuitions/${id}/status`,
+    STATS: "/tuitions/stats/overview",
 } as const;
 
 export const ADMIN_APPLICATION_ROUTES = {

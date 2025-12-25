@@ -434,11 +434,23 @@ var firebase = class {
   }
   static verifyToken = async (idToken) => {
     try {
-      if (!this.#app) this.init();
+      console.log("[Firebase] Verifying token, current app state:", this.#app ? "initialized" : "not initialized");
+      if (!this.#app) {
+        console.log("[Firebase] App not initialized, initializing...");
+        this.init();
+      }
+      if (!this.#app) {
+        throw new Error("Firebase Admin SDK failed to initialize");
+      }
+      console.log("[Firebase] Calling admin.auth().verifyIdToken()...");
       const decodedIdToken = await admin.auth().verifyIdToken(idToken);
+      console.log("[Firebase] Token verified successfully:", { uid: decodedIdToken.uid, email: decodedIdToken.email });
       return decodedIdToken;
     } catch (error) {
-      console.error("Firebase token verification error:", error);
+      console.error("[Firebase] Token verification failed:", error);
+      if (error instanceof Error) {
+        throw new Error(`Firebase token verification failed: ${error.message}`);
+      }
       throw new Error("Invalid or expired Firebase token");
     }
   };
@@ -491,7 +503,7 @@ var sendPaginated = (res, data, page, limit, total, message = "Data fetched succ
     success: true,
     message,
     data,
-    meta: {
+    pagination: {
       page,
       limit,
       total,
@@ -532,6 +544,7 @@ var PUBLIC_USER_PROJECTION = {
 var TUITION_LIST_PROJECTION = {
   _id: 1,
   studentName: 1,
+  student: 1,
   subject: 1,
   class: 1,
   location: 1,
@@ -1449,6 +1462,28 @@ var AdminDashboardController = class {
     }
     sendSuccess(res, null, "User deleted successfully");
   }
+  // ==================== Get Tuition Statistics (Separate) ====================
+  static async getTuitionStats(req, res) {
+    const statArray = await TuitionModel.countByStatus();
+    const stats = statArray.reduce(
+      (acc, item) => {
+        acc[item.status] = item.count;
+        return acc;
+      },
+      { pending: 0, approved: 0, rejected: 0 }
+    );
+    const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+    sendSuccess(
+      res,
+      {
+        total,
+        pending: stats.pending,
+        approved: stats.approved,
+        rejected: stats.rejected
+      },
+      "Tuition stats fetched successfully"
+    );
+  }
   // ==================== Get All Tuitions ====================
   static async getTuitions(req, res) {
     const { page, limit, skip, sort } = parsePagination(
@@ -1519,12 +1554,14 @@ var ADMIN_USER_ROUTES = {
   ALL: "/users",
   BY_ID: (uid) => `/users/${uid}`,
   UPDATE_ROLE: (uid) => `/users/${uid}/role`,
+  UPDATE_STATUS: (uid) => `/users/${uid}/status`,
   DELETE: (uid) => `/users/${uid}`
 };
 var ADMIN_TUITION_ROUTES = {
   ALL: "/tuitions",
   BY_ID: (id) => `/tuitions/${id}`,
-  UPDATE_STATUS: (id) => `/tuitions/${id}/status`
+  UPDATE_STATUS: (id) => `/tuitions/${id}/status`,
+  STATS: "/tuitions/stats/overview"
 };
 var ADMIN_APPLICATION_ROUTES = {
   ALL: "/applications",
@@ -1559,7 +1596,7 @@ router2.patch(
   AdminDashboardController.updateUserRole
 );
 router2.patch(
-  `${ADMIN_USER_ROUTES.ALL}/:email/status`,
+  ADMIN_USER_ROUTES.UPDATE_STATUS(":email"),
   AdminDashboardController.updateUserStatus
 );
 router2.delete(
@@ -1567,11 +1604,15 @@ router2.delete(
   AdminDashboardController.deleteUser
 );
 router2.get(
+  ADMIN_TUITION_ROUTES.STATS,
+  AdminDashboardController.getTuitionStats
+);
+router2.get(
   ADMIN_TUITION_ROUTES.ALL,
   AdminDashboardController.getTuitions
 );
 router2.patch(
-  `${ADMIN_TUITION_ROUTES.ALL}/:id/status`,
+  ADMIN_TUITION_ROUTES.UPDATE_STATUS(":id"),
   AdminDashboardController.updateTuitionStatus
 );
 router2.get(
@@ -1599,7 +1640,7 @@ var StudentDashboardController = class {
     } = req.body;
     const { email, name } = req.user;
     const tuition = await TuitionModel.create({
-      student: { email },
+      student: { email, name: name || "Unknown" },
       subject,
       class: className,
       location,
@@ -1621,11 +1662,12 @@ var StudentDashboardController = class {
       status,
       search
     } = req.query;
-    const filter = { studentId: email };
+    const filter = {
+      "student.email": email
+    };
     if (subject) filter.subject = { $regex: subject, $options: "i" };
     if (className) filter.class = className;
-    if (location)
-      filter.location = { $regex: location, $options: "i" };
+    if (location) filter.location = { $regex: location, $options: "i" };
     if (status) filter.status = status;
     if (search) {
       filter.$or = [
@@ -1634,7 +1676,7 @@ var StudentDashboardController = class {
         { class: { $regex: search, $options: "i" } }
       ];
     }
-    const { data: tuitions, total } = await TuitionModel.findByStudentId(email, {
+    const { data: tuitions, total } = await TuitionModel.findAll(filter, {
       skip,
       limit
     });
@@ -2607,7 +2649,7 @@ var AuthController = class {
     const { name, email, phone, role, password } = req.body;
     const existingUser = await UserModel.findByEmail(email);
     if (existingUser) {
-      res.status(409).json({ error: "Email already registered. Please login." });
+      sendError(res, "Email already registered. Please login.", HTTP_STATUS.CONFLICT);
       return;
     }
     const newUser = await UserModel.create({ email, name, phone, role, password, status: "active", createdAt: /* @__PURE__ */ new Date(), updatedAt: /* @__PURE__ */ new Date() });
@@ -2622,10 +2664,7 @@ var AuthController = class {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1e3
     });
-    res.status(201).json({
-      message: "User registered successfully",
-      user: { email, name, phone, role }
-    });
+    sendCreated(res, { user: { email, name, phone, role } }, "User registered successfully");
   }
   // ==================== Login ====================
   static async signIn(req, res) {
@@ -2640,7 +2679,7 @@ var AuthController = class {
       sendError(res, "Your account has been banned.", HTTP_STATUS.FORBIDDEN);
       return;
     }
-    const isMatch = bcrypt.compare(password, user.password);
+    const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
       sendError(res, "Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
       return;
@@ -2657,11 +2696,7 @@ var AuthController = class {
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
       maxAge: 7 * 24 * 60 * 60 * 1e3
     });
-    res.status(200).json({
-      success: true,
-      message: "Login successful",
-      user: { name, email, phone, role }
-    });
+    sendSuccess(res, { user: { name, email, phone, role } }, "Login successful");
   }
   static async signInWithGooglePopup(req, res) {
     try {
@@ -2673,9 +2708,14 @@ var AuthController = class {
         return;
       }
       const token = authHeader.split(" ")[1];
-      console.log("\u2705 Token extracted, verifying...");
-      const { email, name } = await firebase.verifyToken(token);
-      console.log("\u2705 Token verified, email:", email, "name:", name);
+      console.log("\u2705 Token extracted, token length:", token?.length);
+      if (!token) {
+        console.log("\u274C Token is empty");
+        sendError(res, "Invalid token format.", HTTP_STATUS.BAD_REQUEST);
+        return;
+      }
+      const decodedToken = await firebase.verifyToken(token);
+      const { email, name } = decodedToken;
       if (!email) {
         console.log("\u274C No email in token");
         sendError(res, "Token does not contain an email.", HTTP_STATUS.BAD_REQUEST);
@@ -2685,18 +2725,19 @@ var AuthController = class {
       if (!user) {
         console.log("\u{1F50D} Creating new user for:", email);
         user = await UserModel.create({
-          name,
+          name: name || "Guest",
           email,
           role: "student",
           status: "active",
           createdAt: /* @__PURE__ */ new Date(),
           updatedAt: /* @__PURE__ */ new Date()
         });
+        console.log("\u2705 New user created:", user._id);
       } else {
         console.log("\u2705 Existing user found:", email);
       }
       const jwtToken = jwt2.sign(
-        { email, role: "student" },
+        { email, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: "7d" }
       );
@@ -2707,17 +2748,15 @@ var AuthController = class {
         sameSite: process.env.NODE_ENV === "production" ? "none" : "lax",
         maxAge: 7 * 24 * 60 * 60 * 1e3
       });
-      res.status(200).json({
-        success: true,
-        message: "Google sign-in successful",
-        data: {
-          user: { name, email, role: "student" }
-        }
-      });
+      sendSuccess(res, { user: { name: user.name, email: user.email, role: user.role } }, "Google sign-in successful");
       console.log("\u2705 Response sent successfully");
     } catch (error) {
       console.error("\u274C Google sign-in error:", error);
-      sendError(res, "Google sign-in failed.", HTTP_STATUS.UNAUTHORIZED);
+      const errorMsg = error instanceof Error ? error.message : "Unknown error";
+      console.error("\u274C Error details:", errorMsg);
+      const isDev = process.env.NODE_ENV !== "production";
+      const responseMsg = isDev ? `Google sign-in failed: ${errorMsg}` : "Google sign-in failed. Please try again.";
+      sendError(res, responseMsg, HTTP_STATUS.UNAUTHORIZED);
     }
   }
   // ==================== Logout ====================
@@ -2727,10 +2766,7 @@ var AuthController = class {
       secure: process.env.NODE_ENV === "production",
       sameSite: process.env.NODE_ENV === "production" ? "none" : "lax"
     });
-    res.status(200).json({
-      success: true,
-      message: "Logout successful"
-    });
+    sendSuccess(res, null, "Logout successful");
   }
   // ==================== Get Current User (Me) ====================
   static async getMe(req, res) {

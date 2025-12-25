@@ -153,6 +153,33 @@ export class AdminDashboardController {
         sendSuccess(res, null, "User deleted successfully");
     }
 
+    // ==================== Get Tuition Statistics (Separate) ====================
+    static async getTuitionStats(req: AuthRequest, res: Response): Promise<void> {
+        const statArray = await TuitionModel.countByStatus();
+
+        // Convert array to object { pending: 0, approved: 0, rejected: 0 }
+        const stats = statArray.reduce(
+            (acc, item) => {
+                acc[item.status] = item.count;
+                return acc;
+            },
+            { pending: 0, approved: 0, rejected: 0 } as Record<string, number>
+        );
+
+        const total = Object.values(stats).reduce((sum, count) => sum + count, 0);
+
+        sendSuccess(
+            res,
+            {
+                total,
+                pending: stats.pending,
+                approved: stats.approved,
+                rejected: stats.rejected,
+            },
+            "Tuition stats fetched successfully"
+        );
+    }
+
     // ==================== Get All Tuitions ====================
     static async getTuitions(req: AuthRequest, res: Response): Promise<void> {
         const { page, limit, skip, sort } = parsePagination(

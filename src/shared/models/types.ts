@@ -50,7 +50,7 @@ export interface IUser {
 // ==================== Tuition Interface ====================
 export interface ITuition {
     _id?: ObjectId;
-    student: {email:string};
+    student: {email:string, name:string};
     subject: string;
     class: string;
     location: string;
