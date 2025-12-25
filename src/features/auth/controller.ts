@@ -26,7 +26,7 @@ export class AuthController {
         const existingUser = await UserModel.findByEmail(email);
 
         if (existingUser) {
-            res.status(409).json({ error: "Email already registered. Please login." });
+            sendError(res, "Email already registered. Please login.", HTTP_STATUS.CONFLICT);
             return
         }
 
@@ -47,10 +47,7 @@ export class AuthController {
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
 
-        res.status(201).json({
-            message: "User registered successfully",
-            user: { email, name, phone, role }
-        });
+        sendCreated(res, { user: { email, name, phone, role } }, "User registered successfully");
     }
 
     // ==================== Login ====================
@@ -61,7 +58,7 @@ export class AuthController {
         // Find user
         const user: IUser | null = await UserModel.findByEmail(email);
         console.log(user);
-        
+
         if (!user) {
             sendError(res, "Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
             return;
@@ -74,7 +71,7 @@ export class AuthController {
         }
 
         // Verify password (assuming bcrypt hash)
-        const isMatch = bcrypt.compare(password, user.password!);
+        const isMatch = await bcrypt.compare(password, user.password!);
         if (!isMatch) {
             sendError(res, "Invalid email or password.", HTTP_STATUS.UNAUTHORIZED);
             return;
@@ -98,12 +95,7 @@ export class AuthController {
         });
 
         // Response (safe user object)
-        res.status(200).json({
-            success: true,
-            message: "Login successful",
-            user: { name, email, phone, role }
-
-        });
+        sendSuccess(res, { user: { name, email, phone, role } }, "Login successful");
     }
 
     static async signInWithGooglePopup(req: AuthRequest, res: Response): Promise<void> {
@@ -117,10 +109,19 @@ export class AuthController {
                 return;
             }
             const token = authHeader.split(" ")[1];
-            console.log('✅ Token extracted, verifying...');
+            console.log('✅ Token extracted, token length:', token?.length);
 
-            const { email, name } = await firebase.verifyToken(token);
-            console.log('✅ Token verified, email:', email, 'name:', name);
+            if (!token) {
+                console.log('❌ Token is empty');
+                sendError(res, "Invalid token format.", HTTP_STATUS.BAD_REQUEST);
+                return;
+            }
+
+            // console.log('✅ Verifying Firebase token...');
+            const decodedToken = await firebase.verifyToken(token);
+            // console.log('✅ Token verified, decoded:', { uid: decodedToken.uid, email: decodedToken.email, name: decodedToken.name });
+
+            const { email, name } = decodedToken;
             if (!email) {
                 console.log('❌ No email in token');
                 sendError(res, "Token does not contain an email.", HTTP_STATUS.BAD_REQUEST);
@@ -130,20 +131,21 @@ export class AuthController {
             if (!user) {
                 console.log('🔍 Creating new user for:', email);
                 user = await UserModel.create({
-                    name,
+                    name: name || 'Guest',
                     email,
                     role: 'student',
                     status: "active",
                     createdAt: new Date(),
                     updatedAt: new Date()
                 });
+                console.log('✅ New user created:', user._id);
             } else {
                 console.log('✅ Existing user found:', email);
             }
 
             // Generate JWT (minimal claims only)
             const jwtToken = jwt.sign(
-                { email, role: 'student' },
+                { email, role: user.role },
                 process.env.JWT_SECRET as string,
                 { expiresIn: "7d" }
             );
@@ -158,17 +160,20 @@ export class AuthController {
             });
 
             // Response
-            res.status(200).json({
-                success: true,
-                message: "Google sign-in successful",
-                data: {
-                    user: { name, email, role: 'student' }
-                }
-            });
+            sendSuccess(res, { user: { name: user.name, email: user.email, role: user.role } }, "Google sign-in successful");
             console.log('✅ Response sent successfully');
         } catch (error) {
             console.error('❌ Google sign-in error:', error);
-            sendError(res, "Google sign-in failed.", HTTP_STATUS.UNAUTHORIZED);
+            const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+            console.error('❌ Error details:', errorMsg);
+
+            // Send detailed error for debugging (remove in production)
+            const isDev = process.env.NODE_ENV !== 'production';
+            const responseMsg = isDev
+                ? `Google sign-in failed: ${errorMsg}`
+                : "Google sign-in failed. Please try again.";
+
+            sendError(res, responseMsg, HTTP_STATUS.UNAUTHORIZED);
         }
     }
 
@@ -180,10 +185,7 @@ export class AuthController {
             sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax"
         });
 
-        res.status(200).json({
-            success: true,
-            message: "Logout successful"
-        });
+        sendSuccess(res, null, "Logout successful");
     }
 
 

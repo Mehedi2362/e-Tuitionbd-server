@@ -51,11 +51,26 @@ export class firebase {
 
     static verifyToken = async (idToken: string): Promise<admin.auth.DecodedIdToken> => {
         try {
-            if (!this.#app) this.init();
-            const decodedIdToken = await admin.auth().verifyIdToken(idToken)
-            return decodedIdToken
+            console.log('[Firebase] Verifying token, current app state:', this.#app ? 'initialized' : 'not initialized');
+
+            if (!this.#app) {
+                console.log('[Firebase] App not initialized, initializing...');
+                this.init();
+            }
+
+            if (!this.#app) {
+                throw new Error('Firebase Admin SDK failed to initialize');
+            }
+
+            console.log('[Firebase] Calling admin.auth().verifyIdToken()...');
+            const decodedIdToken = await admin.auth().verifyIdToken(idToken);
+            console.log('[Firebase] Token verified successfully:', { uid: decodedIdToken.uid, email: decodedIdToken.email });
+            return decodedIdToken;
         } catch (error) {
-            console.error('Firebase token verification error:', error);
+            console.error('[Firebase] Token verification failed:', error);
+            if (error instanceof Error) {
+                throw new Error(`Firebase token verification failed: ${error.message}`);
+            }
             throw new Error("Invalid or expired Firebase token");
         }
     }
