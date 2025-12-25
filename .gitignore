@@ -14,3 +14,7 @@ node_modules
 e-tuitionbd-firebase-adminsdk.json
 firebase-base64.txt
 myTxt.txt
+
+# ==================== Build Output ====================
+# Compiled/built code - auto-generated from source
+dist/
