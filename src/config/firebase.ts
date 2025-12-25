@@ -7,28 +7,44 @@ export class firebase {
     static #initFailed: boolean = false;
 
     static #getServiceAccount(): ServiceAccount {
-        const base64Json = getEnv.string('FIREBASE_ADMIN_SDK_JSON');
+        try {
+            const base64Json = getEnv.string('FIREBASE_ADMIN_SDK_JSON');
 
-        // Debug: log the length of base64 string
-        console.log(`[Firebase] Base64 string length: ${base64Json.length}`);
+            // Debug: log the length of base64 string
+            console.log(`[Firebase] ✅ Base64 string received, length: ${base64Json.length}`);
 
-        const adminSdkJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-        const serviceAccount = JSON.parse(adminSdkJson) as ServiceAccount & { private_key?: string };
+            if (base64Json.length < 100) {
+                throw new Error(`Invalid Firebase credentials: Base64 string too short (${base64Json.length} chars). Ensure you copied the entire base64 string.`);
+            }
 
-        // Debug: log the first/last chars of private key
-        if (serviceAccount.private_key) {
+            const adminSdkJson = Buffer.from(base64Json, 'base64').toString('utf-8');
+            const serviceAccount = JSON.parse(adminSdkJson) as ServiceAccount & { private_key?: string };
+
+            // Validate required fields
+            if (!serviceAccount.projectId) {
+                throw new Error('Firebase credentials missing project_id');
+            }
+            if (!serviceAccount.private_key) {
+                throw new Error('Firebase credentials missing private_key');
+            }
+
+            // Debug: log the first/last chars of private key
             const pk = serviceAccount.private_key;
-            console.log(`[Firebase] Private key starts with: ${pk.substring(0, 30)}...`);
-            console.log(`[Firebase] Private key ends with: ...${pk.substring(pk.length - 30)}`);
-            console.log(`[Firebase] Private key length: ${pk.length}`);
+            console.log(`[Firebase] ✅ Credentials loaded for project: ${serviceAccount.project_id}`);
+            console.log(`[Firebase] ✅ Private key starts with: ${pk.substring(0, 30)}...`);
+            console.log(`[Firebase] ✅ Private key length: ${pk.length}`);
 
             // Fix private key newlines - handle multiple escape scenarios
             serviceAccount.private_key = pk
                 .replace(/\\\\n/g, '\n')  // Double escaped \\n -> \n
                 .replace(/\\n/g, '\n');   // Single escaped \n -> \n
-        }
 
-        return serviceAccount;
+            return serviceAccount;
+        } catch (error) {
+            const message = error instanceof Error ? error.message : String(error);
+            console.error(`[Firebase] ❌ Failed to load service account: ${message}`);
+            throw new Error(`Firebase Admin SDK configuration error: ${message}`);
+        }
     }
 
     static init() {
