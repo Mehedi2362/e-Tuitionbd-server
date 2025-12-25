@@ -42,8 +42,8 @@ export class AuthController {
         // Set HttpOnly cookie with proper cross-domain settings
         res.cookie("auth_token", token, {
             httpOnly: true,
-            secure: true, // Required for SameSite=None (production has HTTPS)
-            sameSite: "none", // Allow cross-domain cookies
+            secure: process.env.NODE_ENV === 'production', // HTTPS on production only
+            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // none for production, lax for dev
             path: "/",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
@@ -90,8 +90,8 @@ export class AuthController {
         // Set HttpOnly cookie with proper cross-domain settings
         res.cookie("auth_token", token, {
             httpOnly: true,
-            secure: true, // Required for SameSite=None (production has HTTPS)
-            sameSite: "none", // Allow cross-domain cookies
+            secure: process.env.NODE_ENV === 'production', // HTTPS on production only
+            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // none for production, lax for dev
             path: "/",
             maxAge: 7 * 24 * 60 * 60 * 1000
         });
@@ -156,8 +156,8 @@ export class AuthController {
             // Set HttpOnly cookie with proper cross-domain settings
             res.cookie("auth_token", jwtToken, {
                 httpOnly: true,
-                secure: true, // Required for SameSite=None (production has HTTPS)
-                sameSite: "none", // Allow cross-domain cookies
+                secure: process.env.NODE_ENV === 'production', // HTTPS on production only
+                sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax", // none for production, lax for dev
                 path: "/",
                 maxAge: 7 * 24 * 60 * 60 * 1000
             });
@@ -184,8 +184,8 @@ export class AuthController {
     static async signOut(_req: AuthRequest, res: Response): Promise<void> {
         res.clearCookie("auth_token", {
             httpOnly: true,
-            secure: true, // Required for SameSite=None
-            sameSite: "none", // Must match cookie creation
+            secure: process.env.NODE_ENV === 'production',
+            sameSite: process.env.NODE_ENV === 'production' ? "none" : "lax",
             path: "/"
         });
 
