@@ -18,24 +18,39 @@ export class firebase {
             }
 
             const adminSdkJson = Buffer.from(base64Json, 'base64').toString('utf-8');
-            const serviceAccount = JSON.parse(adminSdkJson) as ServiceAccount & { private_key?: string };
+            const parsedJson = JSON.parse(adminSdkJson) as Record<string, any>;
+
+            // Convert snake_case keys to camelCase for ServiceAccount type
+            const serviceAccount: ServiceAccount = {
+                type: parsedJson.type,
+                projectId: parsedJson.project_id,
+                privateKeyId: parsedJson.private_key_id,
+                privateKey: parsedJson.private_key,
+                clientEmail: parsedJson.client_email,
+                clientId: parsedJson.client_id,
+                authUri: parsedJson.auth_uri,
+                tokenUri: parsedJson.token_uri,
+                authProviderX509CertUrl: parsedJson.auth_provider_x509_cert_url,
+                clientX509CertUrl: parsedJson.client_x509_cert_url,
+                universeDomain: parsedJson.universe_domain
+            } as ServiceAccount;
 
             // Validate required fields
             if (!serviceAccount.projectId) {
-                throw new Error('Firebase credentials missing project_id');
+                throw new Error('Firebase credentials missing projectId');
             }
-            if (!serviceAccount.private_key) {
-                throw new Error('Firebase credentials missing private_key');
+            if (!serviceAccount.privateKey) {
+                throw new Error('Firebase credentials missing privateKey');
             }
 
             // Debug: log the first/last chars of private key
-            const pk = serviceAccount.private_key;
-            console.log(`[Firebase] ✅ Credentials loaded for project: ${serviceAccount.project_id}`);
+            const pk = serviceAccount.privateKey;
+            console.log(`[Firebase] ✅ Credentials loaded for project: ${serviceAccount.projectId}`);
             console.log(`[Firebase] ✅ Private key starts with: ${pk.substring(0, 30)}...`);
             console.log(`[Firebase] ✅ Private key length: ${pk.length}`);
 
             // Fix private key newlines - handle multiple escape scenarios
-            serviceAccount.private_key = pk
+            serviceAccount.privateKey = pk
                 .replace(/\\\\n/g, '\n')  // Double escaped \\n -> \n
                 .replace(/\\n/g, '\n');   // Single escaped \n -> \n
 
